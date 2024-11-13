@@ -2,7 +2,7 @@ from typing import Annotated, List, Dict
 from datetime import datetime, time, timedelta
 from uuid import UUID
 
-from fastapi import FastAPI, Path, Query, Body, Cookie
+from fastapi import FastAPI, Path, Query, Body, Cookie, Form, File, UploadFile, HTTPException
 from pydantic import BaseModel, Field
 
 class Item(BaseModel):
@@ -17,9 +17,9 @@ class Offer(BaseModel):
     items: List[Item]
 
 class User(BaseModel):
-    username: str = Field(..., examples={"example": "user123"})
-    email: str = Field(..., examples={"example": "user123@example.com"})
-    full_name: str | None = Field(None, examples={"example": "John Doe"})
+    username: str
+    email: str
+    full_name: str | None
 
 app = FastAPI()
 
@@ -70,32 +70,23 @@ async def filter_items(
 # New API for practicing usage of Body fields
 @app.post("/items/create_with_fields/")
 async def create_item_with_fields(
-    item: Item = Body(
-        ..., 
-        examples={
-            "example": {
-                "name": "Sample Item",
-                "description": "A sample item for demonstration purposes",
-                "price": 99.99,
-                "tax": 9.99,
-            }
-        },
-    ),
+    item: Item = Body(...),
     importance: int = Body(..., gt=0, description="The importance level of the item"),
 ):
     return {"item": item, "importance": importance}
 
-# New API for practicing nested models
+
+# # New API for practicing nested models
 @app.post("/offers/")
 async def create_offer(offer: Offer):
     return {"offer_name": offer.name, "discount": offer.discount, "items": offer.items}
 
-# New API with extra schema example
+# # New API with extra schema example
 @app.post("/users/")
 async def create_user(user: User):
     return {"username": user.username, "email": user.email, "full_name": user.full_name}
 
-# New API for practicing extra data types
+# # New API for practicing extra data types
 @app.post("/items/extra_data_types/")
 async def create_item_with_extra_data(
     start_time: datetime = Body(..., description="The start time of the item availability"),
@@ -111,10 +102,48 @@ async def create_item_with_extra_data(
         "message": "This is an item with extra data types."
     }
 
-# New API for practicing Cookie parameters
+# # New API for practicing Cookie parameters
 @app.get("/items/cookies/")
 async def read_items_from_cookies(
     session_id: str | None = Cookie(None, description="Session ID stored in the client's cookies"),
 ):
     return {"session_id": session_id, "message": "This is the session ID obtained from the cookies."}
+
+# New API for practicing Form parameters
+@app.post("/items/form_data/")
+async def create_item_with_form(
+    name: str = Form(..., description="The name of the item"),
+    description: str | None = Form(None, description="The description of the item"),
+    price: float = Form(..., description="The price of the item"),
+    tax: float | None = Form(None, description="The tax of the item"),
+):
+    return {
+        "name": name,
+        "description": description,
+        "price": price,
+        "tax": tax,
+        "message": "This is an item created using form data."
+    }
+
+# Integrated API for practicing Form and File parameters
+@app.post("/items/form_and_file/")
+async def create_item_with_form_and_file(
+    name: str = Form(..., description="The name of the item"),
+    description: str | None = Form(None, description="The description of the item"),
+    price: float = Form(..., description="The price of the item"),
+    tax: float | None = Form(None, description="The tax of the item"),
+    file: UploadFile = File(..., description="The file associated with the item"),
+):
+    if price < 0:
+        raise HTTPException(status_code=400, detail="Price cannot be negative")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    return {
+        "name": name,
+        "description": description,
+        "price": price,
+        "tax": tax,
+        "filename": file.filename,
+        "message": "This is an item created using form data and a file."
+    }
 
