@@ -21,6 +21,15 @@ class User(BaseModel):
     email: str
     full_name: str | None
 
+class Author(BaseModel):
+    name: str
+    age: int
+
+class Book(BaseModel):
+    title: str
+    author: Author
+    summary: str | None = None
+
 app = FastAPI()
 
 @app.get("/")
@@ -147,3 +156,20 @@ async def create_item_with_form_and_file(
         "message": "This is an item created using form data and a file."
     }
 
+# New API for using lists instead of sets in response model
+@app.get("/books/", response_model=List[Book])
+async def get_books():
+    return [
+        Book(title="Book 1", author=Author(name="Author 1", age=45), summary="A great book about..."),
+        Book(title="Book 2", author=Author(name="Author 2", age=38), summary="An interesting journey of..."),
+    ]
+
+# New API for practicing extra models
+@app.post("/books/create_with_author/")
+async def create_book_with_author(book: Book):
+    return {"title": book.title, "author": book.author, "summary": book.summary}
+
+# New API for response status code
+@app.post("/books/", status_code=201)
+async def create_book(book: Book):
+    return {"title": book.title, "author": book.author, "summary": book.summary}
